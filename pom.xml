@@ -6,7 +6,7 @@
 
     <groupId>kr.sixtyfive</groupId>
     <artifactId>async-dropbox</artifactId>
-    <version>0.3</version>
+    <version>0.3.1</version>
 
     <licenses>
         <license>

@@ -1,6 +1,6 @@
 package kr.sixtyfive
 
-import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import org.slf4j.LoggerFactory
 import java.awt.Desktop
 import java.io.FileWriter
@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets.UTF_8
 import java.util.concurrent.CompletableFuture
 
 class Dropbox {
+	private val gson = GsonBuilder().disableHtmlEscaping().create()
 
 	private val logger = LoggerFactory.getLogger(this::class.java)
 	private val client = Http()
@@ -42,7 +43,7 @@ class Dropbox {
 			.get()
 			.body()
 			.let { URLDecoder.decode(it, UTF_8) }
-			.let { Gson().fromJson(it, Map::class.java) }.get("name")
+			.let { gson.fromJson(it, Map::class.java) }.get("name")
 			?.let { (it as Map<*, *>).get("display_name") }
 			?.let { it as String }
 	}
@@ -65,7 +66,7 @@ class Dropbox {
 		val token = client.postAsync("https://api.dropboxapi.com/oauth2/token", params = params)
 			.get()
 			.body()!!
-			.let { Gson().fromJson(it, Map::class.java) }
+			.let { gson.fromJson(it, Map::class.java) }
 			.get("access_token") as String
 
 		logger.info("Issued token: $token")
@@ -77,13 +78,13 @@ class Dropbox {
 
 	fun download(fileName: String): CompletableFuture<Pair<InputStream, Response?>> {
 		val url = "https://content.dropboxapi.com/2/files/download"
-		val params = mapOf("arg" to Gson().toJson(mapOf("path" to "/$fileName")))
+		val params = mapOf("arg" to gson.toJson(mapOf("path" to "/$fileName")))
 
 		return client.postAsync(url, headers = baseHeader, params = params, handler = BodyHandlers.ofInputStream())
 			.thenApply {
 				val metadata = it.headers().firstValue("Dropbox-API-Result")
 					.orElse(null)
-					?.let { i -> Gson().fromJson(i, Response::class.java) }
+					?.let { i -> gson.fromJson(i, Response::class.java) }
 				it.body() to metadata
 			}
 	}
@@ -95,7 +96,7 @@ class Dropbox {
 		// But, both of kotlinx-serialization and Gson do not support this kind
 		// of http-header-safe-serialization, I chose to use an alternative: `arg` URL parameter.
 		val params = mapOf(
-			"arg" to Gson().toJson(
+			"arg" to gson.toJson(
 				mapOf(
 					"path" to "/$fileName",
 					"mode" to "overwrite",
@@ -107,7 +108,7 @@ class Dropbox {
 			.thenApply {
 				when (it.statusCode()) {
 					in 200 until 300 -> URLDecoder.decode(it.body(), UTF_8)
-						.let { b -> Gson().fromJson(b, Response::class.java) }
+						.let { b -> gson.fromJson(b, Response::class.java) }
 					else -> {
 						logger.warn("Error occurred while uploading. Status code: ${it.statusCode()}, reason: ${it.body()}")
 						null
