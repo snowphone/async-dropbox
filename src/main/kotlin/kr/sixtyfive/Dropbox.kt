@@ -3,6 +3,7 @@ package kr.sixtyfive
 import com.google.gson.Gson
 import org.slf4j.LoggerFactory
 import java.awt.Desktop
+import java.io.FileWriter
 import java.io.InputStream
 import java.net.URI
 import java.net.URLDecoder
@@ -22,8 +23,10 @@ class Dropbox {
 	private val token: String
 	val user: String?
 
-	constructor(key: String, secret: String) {
+	constructor(key: String, secret: String, savePath: String? = null) {
 		this.token = issueToken(key, secret)
+		savePath?.let(::FileWriter)
+			?.use { it.write(this.token) }
 		this.user = fetchUser(token)
 	}
 
