@@ -1,10 +1,6 @@
 package kr.sixtyfive
 
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
+import com.google.gson.Gson
 import org.slf4j.LoggerFactory
 import java.awt.Desktop
 import java.io.InputStream
@@ -43,11 +39,9 @@ class Dropbox {
 			.get()
 			.body()
 			.let { URLDecoder.decode(it, UTF_8) }
-			.let(Json::parseToJsonElement)
-			.jsonObject["name"]
-			?.jsonObject?.get("display_name")
-			?.jsonPrimitive
-			?.content
+			.let { Gson().fromJson(it, Map::class.java) }.get("name")
+			?.let { (it as Map<*, *>).get("display_name") }
+			?.let { it as String }
 	}
 
 	private fun issueToken(key: String, secret: String): String {
@@ -68,28 +62,25 @@ class Dropbox {
 		val token = client.postAsync("https://api.dropboxapi.com/oauth2/token", params = params)
 			.get()
 			.body()!!
-			.let(Json::parseToJsonElement)
-			.jsonObject
-			.getValue("access_token")
-			.jsonPrimitive
-			.content
+			.let { Gson().fromJson(it, Map::class.java) }
+			.get("access_token") as String
 
 		logger.info("Issued token: $token")
 
 		return token
 	}
 
-	fun authenticate(token: String): Boolean = fetchUser(token) != null
+	fun authenticate(): Boolean = fetchUser(token) != null
 
 	fun download(fileName: String): CompletableFuture<Pair<InputStream, Response?>> {
 		val url = "https://content.dropboxapi.com/2/files/download"
-		val params = mapOf("arg" to Json.encodeToString(mapOf("path" to "/$fileName")))
+		val params = mapOf("arg" to Gson().toJson(mapOf("path" to "/$fileName")))
 
 		return client.postAsync(url, headers = baseHeader, params = params, handler = BodyHandlers.ofInputStream())
 			.thenApply {
 				val metadata = it.headers().firstValue("Dropbox-API-Result")
 					.orElse(null)
-					?.let<String, Response>(Json::decodeFromString)
+					?.let { i -> Gson().fromJson(i, Response::class.java) }
 				it.body() to metadata
 			}
 	}
@@ -101,7 +92,7 @@ class Dropbox {
 		// But, both of kotlinx-serialization and Gson do not support this kind
 		// of http-header-safe-serialization, I chose to use an alternative: `arg` URL parameter.
 		val params = mapOf(
-			"arg" to Json.encodeToString(
+			"arg" to Gson().toJson(
 				mapOf(
 					"path" to "/$fileName",
 					"mode" to "overwrite",
@@ -113,7 +104,7 @@ class Dropbox {
 			.thenApply {
 				when (it.statusCode()) {
 					in 200 until 300 -> URLDecoder.decode(it.body(), UTF_8)
-						.let<String, Response>(Json::decodeFromString)
+						.let { b -> Gson().fromJson(b, Response::class.java) }
 					else -> {
 						logger.warn("Error occurred while uploading. Status code: ${it.statusCode()}, reason: ${it.body()}")
 						null

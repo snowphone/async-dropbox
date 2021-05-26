@@ -1,8 +1,5 @@
 package kr.sixtyfive
 
-import kotlinx.serialization.Serializable
-
-@Serializable
 data class Response(
     val name: String,
     val path_lower: String,
