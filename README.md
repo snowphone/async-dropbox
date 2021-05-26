@@ -1,4 +1,6 @@
 # async-dropbox
+[![](https://jitci.com/gh/snowphone/async-dropbox/svg)](https://jitci.com/gh/snowphone/async-dropbox)
+
 Simple Dropbox SDK with Java Future Interface
 
 ## Usage
