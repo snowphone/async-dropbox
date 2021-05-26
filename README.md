@@ -17,7 +17,7 @@ Simple Dropbox SDK with Java Future Interface
 <dependency>
   <groupId>com.github.snowphone</groupId>
   <artifactId>async-dropbox</artifactId>
-  <version>0.1.5</version>
+  <version>0.2</version>
 </dependency>
 ```
 
@@ -28,6 +28,6 @@ repositories {
   maven { url="https://jitpack.io".let(::uri) }
 }
 dependencies {
-  implementation("com.github.snowphone:async-dropbox:0.1.5")
+  implementation("com.github.snowphone:async-dropbox:0.2")
 }
 ```
