@@ -28,6 +28,6 @@ repositories {
   maven { url="https://jitpack.io".let(::uri) }
 }
 dependencies {
-  implementation("com.github.snowphone:cjk-table:0.1.5")
+  implementation("com.github.snowphone:async-dropbox:0.1.5")
 }
 ```
