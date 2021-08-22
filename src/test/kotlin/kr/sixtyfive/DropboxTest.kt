@@ -6,27 +6,22 @@ import java.util.*
 import kotlin.test.*
 
 internal class DropboxTest {
-
-	val dotenv = Dotenv
-		.load()
-
-	val token = dotenv.get("TOKEN")
-	val userName = dotenv.get("USER_NAME")
+	private val dotenv = Dotenv.load()
+	private val token = dotenv.get("TOKEN")
+	private val userName = dotenv.get("USER_NAME")
+	private val db = Dropbox(token)
 
 	@Test
 	fun simpleAccessTest() {
-		val db = Dropbox(token)
 		assertEquals(db.user, userName)
 	}
 
 	@Test
 	fun intensityTest() {
-		val db = Dropbox(token)
-
-		val dataList = (1..12).map {
-			val bytes = ByteArray(1_000_000)
-			Random().nextBytes(bytes)
-			ByteArrayInputStream(bytes)
+		val dataList = (1..8).map {
+			ByteArray(1_000_000)
+				.also { Random().nextBytes(it) }
+				.inputStream()
 		}.toList()
 
 		val results = dataList.mapIndexed { it, buf ->
@@ -40,8 +35,6 @@ internal class DropboxTest {
 
 	@Test
 	fun createAndReadTest() {
-		val db = Dropbox(token)
-
 		val bytes = ByteArray(1_000)
 			.also { Random().nextBytes(it) }
 
