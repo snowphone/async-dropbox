@@ -1,6 +1,7 @@
 package kr.sixtyfive
 
 import com.google.gson.GsonBuilder
+import org.codehaus.httpcache4j.uri.URIEncoder
 import org.slf4j.LoggerFactory
 import java.awt.Desktop
 import java.io.BufferedInputStream
@@ -93,6 +94,22 @@ class Dropbox {
 			}
 	}
 
+	fun delete(fileName: String): CompletableFuture<Boolean> {
+		val url = "https://api.dropboxapi.com/2/files/delete_v2"
+		val hdr = mapOf(
+			"Authorization" to "Bearer $token",
+			"Content-type" to "application/json"
+		)
+		val data = gson.toJson(mapOf("path" to "/$fileName")).toByteArray().inputStream()
+
+		return client.postAsync(url, headers = hdr, data = data, handler = BodyHandlers.ofInputStream())
+			.thenApply {
+				logger.info(it.body().readAllBytes().decodeToString())
+				it.statusCode() in 200 until 300
+			}
+	}
+
+
 	fun upload(data: InputStream, fileName: String): CompletableFuture<Response?> {
 		val buffer = data.readAllBytes()
 		return upload(buffer, fileName)
@@ -131,6 +148,5 @@ class Dropbox {
 				}
 			}
 	}
-
 }
 

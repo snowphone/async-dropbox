@@ -1,7 +1,6 @@
 package kr.sixtyfive
 
 import io.github.cdimascio.dotenv.Dotenv
-import java.io.ByteArrayInputStream
 import java.util.*
 import kotlin.test.*
 
@@ -45,5 +44,21 @@ internal class DropboxTest {
 			}?.let {
 				assertContentEquals(bytes, it.first.readAllBytes())
 			} ?: fail("Upload and download should be done")
+	}
+
+	@Test
+	fun deleteTest() {
+		val name = "안녕hello_-_-"
+		val bytes = ByteArray(1_000)
+			.also { Random().nextBytes(it) }
+			.inputStream()
+		db.upload(bytes, name)
+			.thenCompose {
+				it?.run {
+					db.delete(name)
+				}
+			}?.thenApply {
+				assertTrue(it)
+			} ?: fail("delete test failed")
 	}
 }
