@@ -3,6 +3,8 @@ package kr.sixtyfive
 import com.google.gson.GsonBuilder
 import org.slf4j.LoggerFactory
 import java.awt.Desktop
+import java.io.BufferedInputStream
+import java.io.ByteArrayInputStream
 import java.io.FileWriter
 import java.io.InputStream
 import java.net.URI
@@ -10,6 +12,8 @@ import java.net.URLDecoder
 import java.net.http.HttpResponse.BodyHandlers
 import java.nio.charset.StandardCharsets.UTF_8
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CompletableFuture.*
+import java.util.concurrent.TimeUnit
 
 class Dropbox {
 	private val gson = GsonBuilder().disableHtmlEscaping().create()
@@ -90,6 +94,11 @@ class Dropbox {
 	}
 
 	fun upload(data: InputStream, fileName: String): CompletableFuture<Response?> {
+		val buffer = data.readAllBytes()
+		return upload(buffer, fileName)
+	}
+
+	private fun upload(buffer: ByteArray, fileName: String): CompletableFuture<Response?> {
 		val url = "https://content.dropboxapi.com/2/files/upload"
 		// Since http header cannot handle non-ascii characters correctly, any
 		// characters whose codepoint is bigger than 0x7F should have been escaped.
@@ -104,17 +113,24 @@ class Dropbox {
 			)
 		)
 
-		return client.postAsync(url, headers = baseHeader, params = params, data = data)
-			.thenApply {
+
+		return client.postAsync(url, headers = baseHeader, params = params, data = buffer.inputStream())
+			.thenCompose {
 				when (it.statusCode()) {
 					in 200 until 300 -> URLDecoder.decode(it.body(), UTF_8)
 						.let { b -> gson.fromJson(b, Response::class.java) }
+						.let { resp -> completedFuture(resp) }
+					429 -> { // Error: too-many-write-operations
+						logger.debug("429 error raised. Retry")
+						upload(buffer, fileName)
+					}
 					else -> {
 						logger.warn("Error occurred while uploading. Status code: ${it.statusCode()}, reason: ${it.body()}")
-						null
+						completedFuture(null)
 					}
 				}
 			}
 	}
+
 }
 
